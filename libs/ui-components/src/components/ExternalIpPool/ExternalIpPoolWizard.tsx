@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageSection, PageSectionTypes, Wizard, WizardStep } from '@patternfly/react-core';
 import { Formik } from 'formik';
@@ -25,8 +25,12 @@ import {
 const ExternalIpPoolWizard = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { mutateAsync: createPool, error } = useCreateResource(ExternalIPPools);
+  const { mutateAsync: createPool, error, reset: resetCreate } = useCreateResource(ExternalIPPools);
   const [currentStep, setCurrentStep] = useState('pool');
+
+  const handleErrorReset = useCallback(() => {
+    resetCreate();
+  }, [resetCreate]);
 
   const onSubmit = async (values: ExternalIpPoolFormValues) => {
     try {
@@ -60,6 +64,7 @@ const ExternalIpPoolWizard = () => {
                 onCancel={() => navigate(EXTERNAL_IP_POOLS_LIST_PATH)}
                 stepHasErrors={externalIpPoolStepHasErrors}
                 error={error}
+                onErrorReset={handleErrorReset}
               />
             }
             onStepChange={(_, step) => setCurrentStep(step.id as string)}
