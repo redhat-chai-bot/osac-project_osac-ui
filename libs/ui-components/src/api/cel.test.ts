@@ -33,9 +33,9 @@ describe('cel', () => {
     );
     expect(
       cel<ExampleResource>((filter) =>
-        filter.field('spec.tags').someEqualsAny(['control-plane', 'gpu']),
+        filter.field('spec.tags').includesAny(['control-plane', 'gpu']),
       ),
-    ).toBe('this.spec.tags.exists(item, item == "control-plane" || item == "gpu")');
+    ).toBe('("control-plane" in this.spec.tags || "gpu" in this.spec.tags)');
     expect(cel<ExampleResource>((filter) => filter.field('spec.guestOsFamily').equals(1))).toBe(
       'this.spec.guest_os_family == 1',
     );
@@ -68,9 +68,27 @@ describe('cel', () => {
   it('uses Boolean identities for empty operand lists', () => {
     expect(cel<ExampleResource>((filter) => filter.and())).toBeUndefined();
     expect(cel<ExampleResource>((filter) => filter.or())).toBe('false');
+    expect(cel<ExampleResource>((filter) => filter.field('spec.tags').includesAny([]))).toBe(
+      'false',
+    );
     expect(cel<ExampleResource>((filter) => filter.field('spec.tags').someEqualsAny([]))).toBe(
       'false',
     );
+  });
+
+  it('includes emits value-in-field CEL expression', () => {
+    expect(cel<ExampleResource>((filter) => filter.field('spec.tags').includes('gpu'))).toBe(
+      '"gpu" in this.spec.tags',
+    );
+  });
+
+  it('includesAny emits in-expressions joined by ||', () => {
+    expect(cel<ExampleResource>((filter) => filter.field('spec.tags').includesAny(['gpu']))).toBe(
+      '"gpu" in this.spec.tags',
+    );
+    expect(
+      cel<ExampleResource>((filter) => filter.field('spec.tags').includesAny(['gpu', 'fast'])),
+    ).toBe('("gpu" in this.spec.tags || "fast" in this.spec.tags)');
   });
 
   it('ignores undefined operands in and/or expressions', () => {

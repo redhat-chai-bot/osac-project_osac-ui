@@ -16,6 +16,21 @@ import { type ListParams, apiQueryKey } from '../types';
 import { type ApiQueryClient, useApiQuery, useApiQueryClient } from '../use-api-query';
 import { buildUpdateMaskPaths } from './update-mask';
 
+/**
+ * Maps {@link Architecture} enum values to their protobuf value names.
+ *
+ * The fulfillment-service stores repeated enum fields as JSON arrays of name
+ * strings (e.g. `["ARCHITECTURE_AMD64"]`). CEL `in` expressions must match
+ * the stored representation, so we pass these names rather than the numeric
+ * enum values.
+ */
+const ARCHITECTURE_PROTO_NAMES: Record<Architecture, string> = {
+  [Architecture.UNSPECIFIED]: 'ARCHITECTURE_UNSPECIFIED',
+  [Architecture.AMD64]: 'ARCHITECTURE_AMD64',
+  [Architecture.ARM64]: 'ARCHITECTURE_ARM64',
+  [Architecture.S390X]: 'ARCHITECTURE_S390X',
+};
+
 type DiskImagesQueryOptions = {
   enabled?: boolean;
 };
@@ -92,7 +107,11 @@ export const buildDiskImageListFilter = (
       clauses.push(filter.field('spec.guestOsFamily').equals(criteria.guestOsFamily));
     }
     if (criteria.architecture?.length) {
-      clauses.push(filter.field('spec.architecture').someEqualsAny(criteria.architecture, 'a'));
+      clauses.push(
+        filter
+          .field('spec.architecture')
+          .includesAny(criteria.architecture.map((a) => ARCHITECTURE_PROTO_NAMES[a])),
+      );
     }
     if (criteria.scope) {
       clauses.push(
